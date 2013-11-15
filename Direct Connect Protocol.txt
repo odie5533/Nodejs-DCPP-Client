@@ -1,0 +1,67 @@
+Requesting a File List (active)
+-------------------------------
+In the following examples, the user requesting a file list will be known as the
+downloader and the user uploading the requested file list will be known as the
+uploader. To request a file, a downloader should first open a TCP listening
+connection on a random port, unique port. The downloader must then send a
+$ConnecToMe command to the hub requesting that the desired username connect to
+the downloader's IP.
+
+    $ConnectToMe DownloaderUsername 1.2.3.4:1410|
+
+The uploader should then connect to the downloader's specified ip and port.
+Upon connecting, the uploader should immediately send a $MyNick and $Lock
+command to the downloader. The $MyNick command simply contains the uploader's
+username on the hub to identity that the connection is the one which the
+downloader wants to receive a file list from. The $Lock command contains
+the same static string for the lock value `EXTENDEDPROTOCOLABCABCABCABCABCABC`
+and contains an identifier for the Pk value consisting of the uploader's
+DC++ client's name and version, followed by the hub's hostname where the
+uploader received the $ConnectToMe command from.
+
+    $MyNick UploaderUsername|
+    $Lock EXTENDEDPROTOCOLABCABCABCABCABCABC Pk=DCPLUSPLUS0.782Ref=hubhost.com|
+
+The downloader should then reply with $MyNick, $Lock, $Supports, $Direction,
+and $Key commands. The lock value again is a static string,
+`EXTENDEDPROTOCOLABCABCABCABCABCABC`, and the Pk value contains only the
+downloader's DC++ client's name and version. A $Supports command is also
+sent by the downloader which specifies what extensions the downloader's client
+supports. In this example, the client supports the ADCGet command which is used
+to specify a file based on its TTH identifier. A $Direction command is also
+sent which specifies what direction the downloader would like a file transfer
+to occur, in this case downloading a file list means the direction is to
+Download. Following the direction is a random number which determines priority
+for the stream. A $Key challenge command based on the supplied uploader's lock
+is returned to the uploader as well.
+
+    $MyNick DownloaderUsername|
+    $Lock EXTENDEDPROTOCOLABCABCABCABCABCABC Pk=DCPLUSPLUS0.777|
+    $Supports MiniSlots XmlBZList ADCGet TTHL TTHF ZLIG |
+    $Direction Download 20888|
+    $Key A 00 0 0 0 0 0|
+
+The uploader should reply with the $Supports, $Direction, and $Key commands. In
+this example, the uploader also supports the ADCGet command which means the
+downloader can use the ADCGet command to specify files to download based on
+their TTH identifier.
+
+    $Supports MiniSlots XmlBZList ADCGet TTHL TTHF ZLIG |
+    $Direction Upload 5108|
+    $Key A 00 0 0 0 0 0|
+
+The downloader may then request the file. Since the uploader specified that
+their client supports the ADCGet command, the file list can be requested as
+such.
+
+    $ADCGET file files.xml.bz2 0 -1 ZL1|
+
+After the request is received by the uploader, an $ADCSND command is sent which
+specifies the filename, seek point in the file to start from (0) and end seek
+point in the file (540539). If the downloader requested from 0 to -1, then the
+end seek point returned should be the length of the file.
+
+    $ADCSND file files.xml.bz2 0 540539 ZL1|
+
+After transmission of the $ADCSND command the uploader then begins transmission
+of the requested file list.
